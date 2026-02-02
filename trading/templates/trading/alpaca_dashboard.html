@@ -1,0 +1,314 @@
+{% extends 'trading/base.html' %}
+{% block title %}Live Trading - TradeFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Connection Status -->
+    {% if not alpaca_available %}
+    <div class="bg-red-500/10 border border-red-500/30 rounded-2xl p-6">
+        <h2 class="text-xl font-bold text-red-400 mb-2">⚠️ Alpaca Not Installed</h2>
+        <p class="text-zinc-300 mb-4">To enable live trading, install the Alpaca library:</p>
+        <code class="bg-zinc-900 px-4 py-2 rounded-lg block">pip install alpaca-py</code>
+    </div>
+    {% elif not alpaca_connected %}
+    <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-6">
+        <h2 class="text-xl font-bold text-amber-400 mb-2">🔑 API Keys Required</h2>
+        <p class="text-zinc-300 mb-4">To connect to Alpaca, add your API keys:</p>
+        <div class="bg-zinc-900 rounded-lg p-4 space-y-2 font-mono text-sm">
+            <p># In your .env file or Django settings:</p>
+            <p>ALPACA_API_KEY=your_api_key_here</p>
+            <p>ALPACA_SECRET_KEY=your_secret_key_here</p>
+        </div>
+        <p class="text-zinc-400 mt-4 text-sm">
+            Get your free API keys at <a href="https://alpaca.markets" target="_blank" class="text-emerald-400 hover:underline">alpaca.markets</a>
+        </p>
+    </div>
+    {% else %}
+    
+    <!-- Account Overview -->
+    <div class="grid md:grid-cols-4 gap-4">
+        <div class="bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20 rounded-2xl p-5">
+            <p class="text-emerald-400 text-xs font-medium uppercase tracking-wider">Portfolio Value</p>
+            <p id="portfolio-value" class="text-3xl font-bold mt-1">${{ account.portfolio_value|floatformat:2|default:"0.00" }}</p>
+        </div>
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+            <p class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Cash</p>
+            <p id="cash-balance" class="text-2xl font-bold mt-1">${{ account.cash|floatformat:2|default:"0.00" }}</p>
+        </div>
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+            <p class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Buying Power</p>
+            <p class="text-2xl font-bold mt-1">${{ account.buying_power|floatformat:2|default:"0.00" }}</p>
+        </div>
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+            <p class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Status</p>
+            <p class="text-2xl font-bold mt-1 {% if account.status == 'ACTIVE' %}text-emerald-400{% else %}text-amber-400{% endif %}">
+                {{ account.status|default:"--" }}
+            </p>
+        </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Trade Panel -->
+        <div class="lg:col-span-2 space-y-5">
+            <!-- Quick Trade -->
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                <h3 class="text-lg font-semibold mb-4">Quick Trade</h3>
+                
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Symbol</label>
+                        <input 
+                            type="text" 
+                            id="trade-symbol" 
+                            placeholder="AAPL, TSLA, SPY..."
+                            class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 uppercase font-mono focus:ring-2 focus:ring-emerald-500/50 outline-none"
+                        >
+                    </div>
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Current Price</label>
+                        <div id="current-price" class="mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 font-mono">
+                            Enter symbol...
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Order Type</label>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="setOrderType('shares')" id="btn-shares" class="flex-1 py-2 rounded-xl font-medium bg-white text-black">
+                                Shares
+                            </button>
+                            <button onclick="setOrderType('dollars')" id="btn-dollars" class="flex-1 py-2 rounded-xl font-medium bg-zinc-800 hover:bg-zinc-700">
+                                Dollars
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider" id="amount-label">Number of Shares</label>
+                        <input 
+                            type="number" 
+                            id="trade-amount" 
+                            value="1"
+                            step="0.01"
+                            class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 font-mono focus:ring-2 focus:ring-emerald-500/50 outline-none"
+                        >
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="executeTrade('buy')" class="py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-all">
+                        Buy
+                    </button>
+                    <button onclick="executeTrade('sell')" class="py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold transition-all">
+                        Sell
+                    </button>
+                </div>
+                
+                <div id="trade-result" class="mt-4 hidden"></div>
+            </div>
+            
+            <!-- Automation Setup -->
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                <h3 class="text-lg font-semibold mb-4">🤖 Automated Trading</h3>
+                
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+                    <p class="text-amber-400 text-sm">
+                        <strong>⚠️ Paper Trading Mode</strong><br>
+                        Automation is configured for paper trading (fake money) by default. 
+                        Switch to live trading only when you're confident.
+                    </p>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Strategy</label>
+                        <select id="auto-strategy" class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 outline-none">
+                            <option value="dca">💰 DCA - Buy Fixed Amount Daily</option>
+                            <option value="threshold">📊 Threshold - Buy Low Only</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Symbol</label>
+                            <input 
+                                type="text" 
+                                id="auto-symbol" 
+                                value="SPY"
+                                class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 uppercase font-mono outline-none"
+                            >
+                        </div>
+                        <div>
+                            <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Amount (USD)</label>
+                            <input 
+                                type="number" 
+                                id="auto-amount" 
+                                value="100"
+                                class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 font-mono outline-none"
+                            >
+                        </div>
+                    </div>
+                    
+                    <button onclick="saveAutomation()" class="w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 font-semibold transition-all">
+                        Save Automation Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Positions -->
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+            <h3 class="text-lg font-semibold mb-4">Your Positions</h3>
+            
+            <div id="positions-list" class="space-y-3 max-h-96 overflow-y-auto">
+                {% if positions %}
+                    {% for pos in positions %}
+                    <div class="bg-zinc-800/50 rounded-xl p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="font-bold text-lg">{{ pos.symbol }}</span>
+                                <p class="text-zinc-500 text-sm">{{ pos.quantity }} shares</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-mono">${{ pos.market_value|floatformat:2 }}</p>
+                                <p class="text-sm {% if pos.unrealized_pl >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">
+                                    {% if pos.unrealized_pl >= 0 %}+{% endif %}${{ pos.unrealized_pl|floatformat:2 }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-xs text-zinc-500">
+                            <span>Avg: ${{ pos.avg_entry_price|floatformat:2 }}</span>
+                            <span>Now: ${{ pos.current_price|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-zinc-500 text-center py-8">No positions yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let orderType = 'shares';
+    let currentSymbol = '';
+    
+    // Set order type
+    function setOrderType(type) {
+        orderType = type;
+        document.getElementById('btn-shares').className = `flex-1 py-2 rounded-xl font-medium ${type === 'shares' ? 'bg-white text-black' : 'bg-zinc-800 hover:bg-zinc-700'}`;
+        document.getElementById('btn-dollars').className = `flex-1 py-2 rounded-xl font-medium ${type === 'dollars' ? 'bg-white text-black' : 'bg-zinc-800 hover:bg-zinc-700'}`;
+        document.getElementById('amount-label').textContent = type === 'shares' ? 'Number of Shares' : 'Dollar Amount';
+    }
+    
+    // Fetch price when symbol changes
+    document.getElementById('trade-symbol').addEventListener('input', async function() {
+        const symbol = this.value.toUpperCase();
+        if (symbol.length < 1) {
+            document.getElementById('current-price').textContent = 'Enter symbol...';
+            return;
+        }
+        
+        currentSymbol = symbol;
+        document.getElementById('current-price').textContent = 'Loading...';
+        
+        try {
+            const response = await fetch(`/api/alpaca/price/${symbol}/`);
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('current-price').innerHTML = `
+                    <span class="text-emerald-400">$${data.price.price.toFixed(2)}</span>
+                `;
+            } else {
+                document.getElementById('current-price').textContent = 'Symbol not found';
+            }
+        } catch (error) {
+            document.getElementById('current-price').textContent = 'Error fetching price';
+        }
+    });
+    
+    // Execute trade
+    async function executeTrade(side) {
+        const symbol = document.getElementById('trade-symbol').value.toUpperCase();
+        const amount = parseFloat(document.getElementById('trade-amount').value);
+        
+        if (!symbol) {
+            showResult('error', 'Please enter a symbol');
+            return;
+        }
+        
+        if (!amount || amount <= 0) {
+            showResult('error', 'Please enter a valid amount');
+            return;
+        }
+        
+        const endpoint = side === 'buy' ? '/api/alpaca/buy/' : '/api/alpaca/sell/';
+        const body = { symbol };
+        
+        if (orderType === 'shares') {
+            body.quantity = amount;
+        } else {
+            body.dollars = amount;
+        }
+        
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify(body)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showResult('success', `${side.toUpperCase()} order placed! Order ID: ${data.order.id}`);
+                // Refresh page after 2 seconds
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showResult('error', data.error);
+            }
+        } catch (error) {
+            showResult('error', 'Failed to place order');
+        }
+    }
+    
+    function showResult(type, message) {
+        const el = document.getElementById('trade-result');
+        el.className = `mt-4 p-4 rounded-xl ${type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`;
+        el.textContent = message;
+        el.classList.remove('hidden');
+    }
+    
+    function saveAutomation() {
+        alert('Automation settings saved! In a production app, this would start a background task to monitor prices and execute trades.');
+    }
+    
+    // Update account data periodically
+    async function refreshAccount() {
+        try {
+            const response = await fetch('/api/alpaca/account/');
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('portfolio-value').textContent = `$${data.account.portfolio_value.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                document.getElementById('cash-balance').textContent = `$${data.account.cash.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            }
+        } catch (error) {
+            console.error('Failed to refresh account:', error);
+        }
+    }
+    
+    // Refresh every 30 seconds
+    setInterval(refreshAccount, 30000);
+</script>
+{% endblock %}

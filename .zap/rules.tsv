@@ -1,0 +1,63 @@
+# OWASP ZAP Scanning Rules Configuration
+# TSV format: rule_id	action	name
+#
+# Actions:
+# - IGNORE: Don't report this finding
+# - WARN: Report as warning (won't fail CI)
+# - FAIL: Report as error (will fail CI)
+#
+# Customize based on your application's needs
+
+# Informational (usually ignore in CI)
+10021	WARN	X-Content-Type-Options Header Missing
+10038	WARN	Content Security Policy (CSP) Header Not Set
+
+# Low severity
+10035	WARN	Strict-Transport-Security Header Not Set
+10036	WARN	Server Leaks Version Information via "Server" HTTP Response Header Field
+10037	WARN	Server Leaks Information via "X-Powered-By" HTTP Response Header Field(s)
+10096	WARN	Timestamp Disclosure - Unix
+
+# Medium severity (should fix)
+10010	WARN	Cookie No HttpOnly Flag
+10011	WARN	Cookie Without Secure Flag
+10015	WARN	Incomplete or No Cache-control and Pragma HTTP Header Set
+10017	WARN	Cross-Domain JavaScript Source File Inclusion
+10020	WARN	X-Frame-Options Header Not Set
+10098	WARN	Cross-Domain Misconfiguration
+
+# High severity (must fix)
+10016	FAIL	Web Browser XSS Protection Not Enabled
+10019	FAIL	Content-Type Header Missing
+10024	FAIL	Information Disclosure - Sensitive Information in URL
+10025	FAIL	Information Disclosure - Sensitive Information in HTTP Referrer Header
+10040	FAIL	Secure Pages Include Mixed Content
+10054	FAIL	Cookie without SameSite Attribute
+10055	FAIL	CSP: Wildcard Directive
+10056	FAIL	CSP: script-src unsafe-inline
+10057	FAIL	CSP: style-src unsafe-inline
+10061	FAIL	X-Content-Type-Options Header Missing
+10062	FAIL	PII Disclosure
+
+# Critical (immediate action)
+10012	FAIL	Password Autocomplete in Browser
+10020	FAIL	Anti-clickjacking Header Not Set (X-Frame-Options)
+40012	FAIL	Cross Site Scripting (Reflected)
+40014	FAIL	Cross Site Scripting (Persistent)
+40016	FAIL	Cross Site Scripting (Persistent) - Prime
+40017	FAIL	Cross Site Scripting (Persistent) - Spider
+40018	FAIL	SQL Injection
+40019	FAIL	SQL Injection - MySQL
+40020	FAIL	SQL Injection - Hypersonic SQL
+40021	FAIL	SQL Injection - Oracle
+40022	FAIL	SQL Injection - PostgreSQL
+40024	FAIL	SQL Injection - SQLite
+90019	FAIL	Server Side Code Injection
+90020	FAIL	Remote OS Command Injection
+90021	FAIL	XPath Injection
+90023	FAIL	XML External Entity Attack
+90024	FAIL	Generic Padding Oracle
+90025	FAIL	Expression Language Injection
+90026	FAIL	SOAP Action Spoofing
+90029	FAIL	SOAP XML Injection
+90030	FAIL	WSDL File Detection

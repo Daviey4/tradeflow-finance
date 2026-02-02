@@ -1,0 +1,15 @@
+# TradeFlow Mobile App - Python Requirements
+# Pure Python mobile app using Flet
+
+# Core framework
+flet>=0.21.0
+
+# HTTP requests
+requests>=2.31.0
+
+# For building mobile apps
+flet-cli>=0.21.0
+
+# Optional: For more complex data handling
+# pandas>=2.0.0
+# numpy>=1.24.0

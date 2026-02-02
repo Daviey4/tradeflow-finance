@@ -1,0 +1,457 @@
+{% extends 'trading/base.html' %}
+{% block title %}Investment Calculator - TradeFlow{% endblock %}
+
+{% block content %}
+<div class="grid lg:grid-cols-2 gap-6">
+    <!-- Calculator Input -->
+    <div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-3xl p-6">
+        <h2 class="text-2xl font-bold mb-6">Investment Calculator</h2>
+        
+        <div class="space-y-5">
+            <!-- Starting Amount -->
+            <div>
+                <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Starting Amount ($)</label>
+                <input 
+                    type="number" 
+                    id="starting-amount" 
+                    value="1000" 
+                    min="0" 
+                    step="100"
+                    onchange="calculate()"
+                    class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-xl font-mono focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none"
+                >
+            </div>
+            
+            <!-- Monthly Contribution -->
+            <div>
+                <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Monthly Investment ($)</label>
+                <input 
+                    type="number" 
+                    id="monthly-amount" 
+                    value="100" 
+                    min="0" 
+                    step="10"
+                    onchange="calculate()"
+                    class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-xl font-mono focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none"
+                >
+            </div>
+            
+            <!-- Time Period -->
+            <div>
+                <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Time Period (Years)</label>
+                <div class="flex items-center gap-4 mt-2">
+                    <input 
+                        type="range" 
+                        id="years" 
+                        value="2" 
+                        min="1" 
+                        max="30"
+                        onchange="calculate()"
+                        class="flex-1 accent-emerald-500"
+                    >
+                    <span id="years-display" class="font-mono bg-zinc-900 px-4 py-2 rounded-xl border border-zinc-700 min-w-[80px] text-center">2 yrs</span>
+                </div>
+            </div>
+            
+            <!-- Expected Return -->
+            <div>
+                <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Expected Annual Return (%)</label>
+                <div class="flex items-center gap-4 mt-2">
+                    <input 
+                        type="range" 
+                        id="return-rate" 
+                        value="10" 
+                        min="1" 
+                        max="25"
+                        onchange="calculate()"
+                        class="flex-1 accent-emerald-500"
+                    >
+                    <span id="return-display" class="font-mono bg-zinc-900 px-4 py-2 rounded-xl border border-zinc-700 min-w-[80px] text-center">10%</span>
+                </div>
+            </div>
+            
+            <!-- Quick Presets -->
+            <div>
+                <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-2 block">Quick Presets</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setPreset(5, 'Conservative')" class="py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-all">
+                        🛡️ Conservative<br><span class="text-zinc-500 text-xs">5% return</span>
+                    </button>
+                    <button onclick="setPreset(10, 'Moderate')" class="py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-all">
+                        ⚖️ Moderate<br><span class="text-zinc-500 text-xs">10% return</span>
+                    </button>
+                    <button onclick="setPreset(15, 'Aggressive')" class="py-2 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-all">
+                        🚀 Aggressive<br><span class="text-zinc-500 text-xs">15% return</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results -->
+    <div class="space-y-5">
+        <!-- Main Result Card -->
+        <div class="bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20 rounded-3xl p-6">
+            <p class="text-emerald-400 text-xs font-medium uppercase tracking-wider mb-2">Final Balance</p>
+            <p id="final-balance" class="text-5xl font-bold text-emerald-400">$3,921</p>
+            <p id="total-growth" class="text-zinc-400 mt-2">+$521 in growth</p>
+        </div>
+        
+        <!-- Breakdown -->
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+            <h3 class="font-semibold mb-4">Breakdown</h3>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-zinc-400">Starting Amount</span>
+                    <span id="result-starting" class="font-mono">$1,000</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-zinc-400">Total Contributions</span>
+                    <span id="result-contributions" class="font-mono">$2,400</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-zinc-400">Total Invested</span>
+                    <span id="result-invested" class="font-mono font-semibold">$3,400</span>
+                </div>
+                <div class="h-px bg-zinc-800"></div>
+                <div class="flex justify-between items-center">
+                    <span class="text-zinc-400">Interest Earned</span>
+                    <span id="result-interest" class="font-mono text-emerald-400">+$521</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-zinc-400">Return on Investment</span>
+                    <span id="result-roi" class="font-mono text-emerald-400">+15.3%</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Goal Calculator -->
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+            <h3 class="font-semibold mb-4">🎯 Goal Calculator</h3>
+            <div class="flex gap-3">
+                <div class="flex-1">
+                    <label class="text-zinc-500 text-xs">I want to reach</label>
+                    <input 
+                        type="number" 
+                        id="goal-amount" 
+                        value="5000" 
+                        min="100"
+                        step="100"
+                        onchange="calculateGoal()"
+                        class="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 font-mono outline-none focus:border-zinc-500"
+                    >
+                </div>
+                <div class="flex-1">
+                    <label class="text-zinc-500 text-xs">Monthly needed</label>
+                    <div id="goal-monthly" class="mt-1 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-2 font-mono text-emerald-400 font-semibold">
+                        $143/mo
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Projection Chart -->
+<div class="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 mt-6">
+    <h3 class="font-semibold mb-4">Growth Projection</h3>
+    <div id="chart-container" class="h-64 relative">
+        <!-- Chart will be drawn here -->
+    </div>
+    <div class="flex items-center justify-center gap-6 mt-4 text-sm">
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-zinc-500"></div>
+            <span class="text-zinc-400">Total Invested</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+            <span class="text-zinc-400">Balance with Growth</span>
+        </div>
+    </div>
+</div>
+
+<!-- Milestones Table -->
+<div class="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 mt-6">
+    <h3 class="font-semibold mb-4">Year-by-Year Breakdown</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
+                    <th class="text-left py-3 px-4">Year</th>
+                    <th class="text-right py-3 px-4">Invested</th>
+                    <th class="text-right py-3 px-4">Balance</th>
+                    <th class="text-right py-3 px-4">Interest Earned</th>
+                    <th class="text-right py-3 px-4">Growth</th>
+                </tr>
+            </thead>
+            <tbody id="milestones-table">
+                <!-- Will be populated by JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Comparison Table -->
+<div class="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 mt-6">
+    <h3 class="font-semibold mb-4">Compare Different Scenarios</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
+                    <th class="text-left py-3 px-4">Monthly</th>
+                    <th class="text-right py-3 px-4">1 Year</th>
+                    <th class="text-right py-3 px-4">2 Years</th>
+                    <th class="text-right py-3 px-4">5 Years</th>
+                    <th class="text-right py-3 px-4">10 Years</th>
+                    <th class="text-right py-3 px-4">20 Years</th>
+                </tr>
+            </thead>
+            <tbody id="comparison-table">
+                <!-- Will be populated by JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Calculate future value with monthly contributions
+    function calculateFutureValue(principal, monthly, years, annualRate) {
+        const monthlyRate = annualRate / 100 / 12;
+        const months = years * 12;
+        
+        // Future value of principal
+        const fvPrincipal = principal * Math.pow(1 + monthlyRate, months);
+        
+        // Future value of monthly contributions (annuity)
+        let fvContributions = 0;
+        if (monthlyRate > 0) {
+            fvContributions = monthly * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+        } else {
+            fvContributions = monthly * months;
+        }
+        
+        return fvPrincipal + fvContributions;
+    }
+    
+    // Main calculation function
+    function calculate() {
+        const starting = parseFloat(document.getElementById('starting-amount').value) || 0;
+        const monthly = parseFloat(document.getElementById('monthly-amount').value) || 0;
+        const years = parseInt(document.getElementById('years').value) || 1;
+        const returnRate = parseFloat(document.getElementById('return-rate').value) || 0;
+        
+        // Update displays
+        document.getElementById('years-display').textContent = `${years} yr${years > 1 ? 's' : ''}`;
+        document.getElementById('return-display').textContent = `${returnRate}%`;
+        
+        // Calculate final balance
+        const finalBalance = calculateFutureValue(starting, monthly, years, returnRate);
+        const totalContributions = monthly * years * 12;
+        const totalInvested = starting + totalContributions;
+        const interestEarned = finalBalance - totalInvested;
+        const roi = totalInvested > 0 ? (interestEarned / totalInvested) * 100 : 0;
+        
+        // Update results
+        document.getElementById('final-balance').textContent = `$${Math.round(finalBalance).toLocaleString()}`;
+        document.getElementById('total-growth').textContent = `+$${Math.round(interestEarned).toLocaleString()} in growth`;
+        document.getElementById('result-starting').textContent = `$${starting.toLocaleString()}`;
+        document.getElementById('result-contributions').textContent = `$${totalContributions.toLocaleString()}`;
+        document.getElementById('result-invested').textContent = `$${totalInvested.toLocaleString()}`;
+        document.getElementById('result-interest').textContent = `+$${Math.round(interestEarned).toLocaleString()}`;
+        document.getElementById('result-roi').textContent = `+${roi.toFixed(1)}%`;
+        
+        // Update chart
+        drawChart(starting, monthly, years, returnRate);
+        
+        // Update milestones table
+        updateMilestones(starting, monthly, years, returnRate);
+        
+        // Update comparison table
+        updateComparison(starting, returnRate);
+        
+        // Update goal calculator
+        calculateGoal();
+    }
+    
+    // Draw projection chart
+    function drawChart(starting, monthly, years, returnRate) {
+        const container = document.getElementById('chart-container');
+        const dataPoints = Math.min(years * 12, 360); // Monthly points, max 30 years
+        const step = Math.max(1, Math.floor(dataPoints / 60)); // Limit to ~60 points for performance
+        
+        let investedData = [];
+        let balanceData = [];
+        let maxValue = 0;
+        
+        for (let month = 0; month <= dataPoints; month += step) {
+            const yearFraction = month / 12;
+            const invested = starting + (monthly * month);
+            const balance = calculateFutureValue(starting, monthly, yearFraction, returnRate);
+            
+            investedData.push({ month, value: invested });
+            balanceData.push({ month, value: balance });
+            maxValue = Math.max(maxValue, balance);
+        }
+        
+        // Create SVG
+        const width = 100;
+        const height = 100;
+        
+        const investedPoints = investedData.map((d, i) => {
+            const x = (i / (investedData.length - 1)) * width;
+            const y = height - (d.value / maxValue) * height;
+            return `${x},${y}`;
+        }).join(' ');
+        
+        const balancePoints = balanceData.map((d, i) => {
+            const x = (i / (balanceData.length - 1)) * width;
+            const y = height - (d.value / maxValue) * height;
+            return `${x},${y}`;
+        }).join(' ');
+        
+        container.innerHTML = `
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="w-full h-full">
+                <defs>
+                    <linearGradient id="balanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#22c55e" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                
+                <!-- Grid lines -->
+                <line x1="0" y1="25" x2="100" y2="25" stroke="#27272a" stroke-width="0.2"/>
+                <line x1="0" y1="50" x2="100" y2="50" stroke="#27272a" stroke-width="0.2"/>
+                <line x1="0" y1="75" x2="100" y2="75" stroke="#27272a" stroke-width="0.2"/>
+                
+                <!-- Balance area -->
+                <polygon points="0,100 ${balancePoints} 100,100" fill="url(#balanceGradient)"/>
+                
+                <!-- Invested line -->
+                <polyline points="${investedPoints}" fill="none" stroke="#71717a" stroke-width="0.5" stroke-dasharray="2,1"/>
+                
+                <!-- Balance line -->
+                <polyline points="${balancePoints}" fill="none" stroke="#22c55e" stroke-width="0.8"/>
+            </svg>
+            
+            <div class="absolute top-2 right-3 text-xs text-zinc-500 font-mono">
+                $${Math.round(maxValue).toLocaleString()}
+            </div>
+            <div class="absolute bottom-2 left-3 text-xs text-zinc-500">
+                Start
+            </div>
+            <div class="absolute bottom-2 right-3 text-xs text-zinc-500">
+                ${years} year${years > 1 ? 's' : ''}
+            </div>
+        `;
+    }
+    
+    // Update milestones table
+    function updateMilestones(starting, monthly, years, returnRate) {
+        const tbody = document.getElementById('milestones-table');
+        let html = '';
+        
+        for (let year = 1; year <= years; year++) {
+            const invested = starting + (monthly * year * 12);
+            const balance = calculateFutureValue(starting, monthly, year, returnRate);
+            const interest = balance - invested;
+            const growth = invested > 0 ? (interest / invested) * 100 : 0;
+            
+            html += `
+                <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/30">
+                    <td class="py-3 px-4 font-medium">Year ${year}</td>
+                    <td class="py-3 px-4 text-right font-mono text-zinc-400">$${Math.round(invested).toLocaleString()}</td>
+                    <td class="py-3 px-4 text-right font-mono font-semibold">$${Math.round(balance).toLocaleString()}</td>
+                    <td class="py-3 px-4 text-right font-mono text-emerald-400">+$${Math.round(interest).toLocaleString()}</td>
+                    <td class="py-3 px-4 text-right">
+                        <span class="px-2 py-1 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-400">
+                            +${growth.toFixed(1)}%
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        tbody.innerHTML = html;
+    }
+    
+    // Update comparison table
+    function updateComparison(starting, returnRate) {
+        const tbody = document.getElementById('comparison-table');
+        const monthlyAmounts = [50, 100, 150, 200, 300, 500];
+        const yearOptions = [1, 2, 5, 10, 20];
+        
+        let html = '';
+        
+        for (const monthly of monthlyAmounts) {
+            html += `<tr class="border-b border-zinc-800/50 hover:bg-zinc-800/30">`;
+            html += `<td class="py-3 px-4 font-medium">$${monthly}/mo</td>`;
+            
+            for (const years of yearOptions) {
+                const balance = calculateFutureValue(starting, monthly, years, returnRate);
+                html += `<td class="py-3 px-4 text-right font-mono">$${Math.round(balance).toLocaleString()}</td>`;
+            }
+            
+            html += `</tr>`;
+        }
+        
+        tbody.innerHTML = html;
+    }
+    
+    // Calculate monthly needed to reach goal
+    function calculateGoal() {
+        const starting = parseFloat(document.getElementById('starting-amount').value) || 0;
+        const years = parseInt(document.getElementById('years').value) || 1;
+        const returnRate = parseFloat(document.getElementById('return-rate').value) || 0;
+        const goal = parseFloat(document.getElementById('goal-amount').value) || 0;
+        
+        const monthlyRate = returnRate / 100 / 12;
+        const months = years * 12;
+        
+        // Future value of starting amount
+        const fvStarting = starting * Math.pow(1 + monthlyRate, months);
+        
+        // Amount needed from contributions
+        const needed = goal - fvStarting;
+        
+        // Monthly payment needed
+        let monthlyNeeded = 0;
+        if (needed > 0) {
+            if (monthlyRate > 0) {
+                monthlyNeeded = needed / ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+            } else {
+                monthlyNeeded = needed / months;
+            }
+        }
+        
+        document.getElementById('goal-monthly').textContent = monthlyNeeded > 0 
+            ? `$${Math.ceil(monthlyNeeded)}/mo` 
+            : 'Already there!';
+    }
+    
+    // Set preset return rate
+    function setPreset(rate, name) {
+        document.getElementById('return-rate').value = rate;
+        calculate();
+    }
+    
+    // Initialize on page load
+    calculate();
+    
+    // Update footer
+    async function loadPortfolioData() {
+        try {
+            const response = await fetch('/api/portfolio/');
+            const data = await response.json();
+            document.getElementById('footer-balance').textContent = `$${data.balance.toFixed(2)}`;
+            if (data.holding) {
+                document.getElementById('footer-holdings').textContent = `${data.holding.amount.toFixed(4)}`;
+            }
+        } catch (error) {
+            console.error('Error loading portfolio:', error);
+        }
+    }
+    loadPortfolioData();
+</script>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends 'trading/base.html' %}
+{% block title %}Trade History - TradeFlow{% endblock %}
+
+{% block content %}
+<div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-3xl p-4 sm:p-6">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <h2 class="text-2xl font-bold">Trade History</h2>
+        <div class="flex items-center gap-3">
+            <span class="text-zinc-500 text-sm">{{ trades.count }} trades</span>
+            <span class="px-3 py-1 rounded-full text-sm font-medium {% if total_realized_pl >= 0 %}bg-emerald-500/10 text-emerald-400{% else %}bg-red-500/10 text-red-400{% endif %}">
+                Realized: {% if total_realized_pl >= 0 %}+{% endif %}${{ total_realized_pl|floatformat:2 }}
+            </span>
+        </div>
+    </div>
+
+    {% if trades %}
+    <div class="overflow-x-auto -mx-4 sm:mx-0">
+        <table class="w-full min-w-[640px]">
+            <thead>
+                <tr class="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
+                    <th class="text-left py-4 px-4">Type</th>
+                    <th class="text-left py-4 px-4">Asset</th>
+                    <th class="text-right py-4 px-4">Amount</th>
+                    <th class="text-right py-4 px-4">Price</th>
+                    <th class="text-right py-4 px-4">Total</th>
+                    <th class="text-right py-4 px-4">P/L</th>
+                    <th class="text-left py-4 px-4">Reason</th>
+                    <th class="text-right py-4 px-4">Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trade in trades %}
+                <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+                    <td class="py-4 px-4">
+                        <span class="px-2 py-1 rounded-lg text-xs font-medium {% if trade.trade_type == 'BUY' %}bg-emerald-500/10 text-emerald-400{% else %}bg-red-500/10 text-red-400{% endif %}">
+                            {{ trade.trade_type }}
+                        </span>
+                    </td>
+                    <td class="py-4 px-4 font-medium">{{ trade.symbol }}</td>
+                    <td class="py-4 px-4 text-right font-mono">{{ trade.amount|floatformat:6 }}</td>
+                    <td class="py-4 px-4 text-right font-mono">${{ trade.price|floatformat:2 }}</td>
+                    <td class="py-4 px-4 text-right font-mono">${{ trade.total|floatformat:2 }}</td>
+                    <td class="py-4 px-4 text-right">
+                        {% if trade.profit is not None %}
+                            <span class="font-mono {% if trade.profit >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">
+                                {% if trade.profit >= 0 %}+{% endif %}${{ trade.profit|floatformat:2 }}
+                            </span>
+                        {% else %}
+                            <span class="text-zinc-600">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4 px-4 text-zinc-500 text-sm">{{ trade.reason }}</td>
+                    <td class="py-4 px-4 text-right text-zinc-500 text-sm">{{ trade.created_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-16 text-zinc-500">
+        <p class="text-4xl mb-4">📊</p>
+        <p>No trades yet. Start automation to begin trading.</p>
+        <a href="{% url 'trading:dashboard' %}" class="inline-block mt-4 px-6 py-2 bg-white text-black rounded-xl font-medium hover:bg-zinc-200 transition-colors">
+            Go to Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Update footer with current data
+    async function loadPortfolioData() {
+        try {
+            const response = await fetch('/api/portfolio/');
+            const data = await response.json();
+            document.getElementById('footer-balance').textContent = `$${data.balance.toFixed(2)}`;
+            if (data.holding) {
+                document.getElementById('footer-holdings').textContent = `${data.holding.amount.toFixed(4)}`;
+            }
+        } catch (error) {
+            console.error('Error loading portfolio:', error);
+        }
+    }
+    
+    loadPortfolioData();
+</script>
+{% endblock %}

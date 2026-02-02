@@ -1,0 +1,715 @@
+{% extends 'trading/base.html' %}
+{% block title %}Dashboard - TradeFlow{% endblock %}
+
+{% block content %}
+<!-- Top Stats Row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+    <div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-2xl p-4 sm:p-5 hover:border-zinc-700 transition-all">
+        <p class="text-zinc-500 text-xs font-medium uppercase tracking-wider">Portfolio Value</p>
+        <p id="portfolio-value" class="text-xl sm:text-2xl font-bold mt-1">$50,000.00</p>
+    </div>
+    <div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-2xl p-4 sm:p-5 hover:border-zinc-700 transition-all">
+        <p class="text-zinc-500 text-xs font-medium uppercase tracking-wider">Total P/L</p>
+        <p id="total-pl" class="text-xl sm:text-2xl font-bold mt-1 text-zinc-400">$0.00</p>
+        <p id="total-pl-percent" class="text-zinc-500 text-xs mt-1">0.00%</p>
+    </div>
+    <div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-2xl p-4 sm:p-5 hover:border-zinc-700 transition-all">
+        <p class="text-zinc-500 text-xs font-medium uppercase tracking-wider">Cash Balance</p>
+        <p id="cash-balance" class="text-xl sm:text-2xl font-bold mt-1">${{ portfolio.balance|floatformat:2 }}</p>
+    </div>
+    <div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-2xl p-4 sm:p-5 hover:border-zinc-700 transition-all">
+        <p class="text-zinc-500 text-xs font-medium uppercase tracking-wider">Win Rate</p>
+        <p class="text-xl sm:text-2xl font-bold mt-1">{{ win_rate }}%</p>
+        <p class="text-zinc-500 text-xs mt-1">{{ total_trades }} trades</p>
+    </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="grid lg:grid-cols-3 gap-6">
+    <!-- Price Panel - 2 columns -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Asset Selector & Price -->
+        <div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-3xl p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div id="asset-icon" class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style="background-color: {{ asset_info.color }}20;">
+                            {% if asset_info.symbol == 'BTC' %}₿{% elif asset_info.symbol == 'ETH' %}Ξ{% else %}{{ asset_info.symbol|slice:":1" }}{% endif %}
+                        </div>
+                        <select id="asset-select" onchange="changeAsset(this.value)" class="bg-transparent text-xl sm:text-2xl font-bold appearance-none cursor-pointer hover:text-zinc-300 transition-colors pr-8" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%23666%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27M19 9l-7 7-7-7%27/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right center; background-size: 20px;">
+                            {% for asset in assets %}
+                            <option value="{{ asset.id }}" {% if asset.id == selected_asset %}selected{% endif %} class="bg-zinc-900">{{ asset.symbol }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <p id="asset-name" class="text-zinc-500 text-sm">{{ asset_info.name }}</p>
+                </div>
+                
+                <div class="text-left sm:text-right">
+                    <p id="current-price" class="text-3xl sm:text-4xl font-bold tracking-tight">Loading...</p>
+                    <p id="price-change" class="text-sm font-medium text-zinc-500">--</p>
+                </div>
+            </div>
+
+            <!-- Price Chart -->
+            <div id="chart-container" class="h-48 sm:h-56 bg-zinc-900/50 rounded-xl mb-4 flex items-center justify-center">
+                <p class="text-zinc-500">Loading chart...</p>
+            </div>
+            
+            <div class="flex items-center justify-between text-xs text-zinc-500">
+                <span id="chart-info">Last 0 data points</span>
+                <span id="last-update">--</span>
+            </div>
+        </div>
+
+        <!-- Strategy Configuration -->
+        <div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-3xl p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <h3 class="text-lg font-semibold">Strategy Configuration</h3>
+                <button id="toggle-bot" onclick="toggleBot()" disabled class="w-full sm:w-auto px-6 py-3 rounded-2xl font-semibold transition-all transform hover:scale-105 active:scale-95 bg-zinc-800 text-zinc-600 cursor-not-allowed">
+                    Loading...
+                </button>
+            </div>
+
+            <!-- Strategy Selector -->
+            <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+                <button onclick="setStrategy('threshold')" id="btn-threshold" class="p-3 sm:p-4 rounded-2xl text-left transition-all bg-white text-black ring-2 ring-white">
+                    <span class="text-xl sm:text-2xl">📊</span>
+                    <p class="font-semibold mt-1 sm:mt-2 text-sm sm:text-base">Threshold</p>
+                    <p class="text-xs text-zinc-600 hidden sm:block">Buy low, sell high</p>
+                </button>
+                <button onclick="setStrategy('trailing')" id="btn-trailing" class="p-3 sm:p-4 rounded-2xl text-left transition-all bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700">
+                    <span class="text-xl sm:text-2xl">📈</span>
+                    <p class="font-semibold mt-1 sm:mt-2 text-sm sm:text-base">Trailing</p>
+                    <p class="text-xs text-zinc-500 hidden sm:block">Follow the trend</p>
+                </button>
+                <button onclick="setStrategy('dca')" id="btn-dca" class="p-3 sm:p-4 rounded-2xl text-left transition-all bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700">
+                    <span class="text-xl sm:text-2xl">💰</span>
+                    <p class="font-semibold mt-1 sm:mt-2 text-sm sm:text-base">DCA</p>
+                    <p class="text-xs text-zinc-500 hidden sm:block">Regular purchases</p>
+                </button>
+            </div>
+
+            <!-- Strategy Settings -->
+            <div class="bg-zinc-800/30 rounded-2xl p-4 sm:p-5">
+                <!-- Threshold Settings -->
+                <div id="settings-threshold" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Buy Below</label>
+                        <div class="flex gap-2 mt-2">
+                            <input type="number" id="buy-threshold" value="{{ strategy.buy_threshold }}" onchange="updateStrategy()" class="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-3 sm:px-4 py-3 text-emerald-400 font-mono focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500">
+                            <button onclick="setThresholdPercent('buy', -5)" class="px-3 bg-zinc-700 hover:bg-zinc-600 rounded-xl text-sm transition-colors">-5%</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Sell Above</label>
+                        <div class="flex gap-2 mt-2">
+                            <input type="number" id="sell-threshold" value="{{ strategy.sell_threshold }}" onchange="updateStrategy()" class="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-3 sm:px-4 py-3 text-red-400 font-mono focus:ring-2 focus:ring-red-500/50 focus:border-red-500">
+                            <button onclick="setThresholdPercent('sell', 5)" class="px-3 bg-zinc-700 hover:bg-zinc-600 rounded-xl text-sm transition-colors">+5%</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Trade Size</label>
+                        <input type="number" step="0.001" id="trade-amount" value="{{ strategy.trade_amount }}" onchange="updateStrategy()" class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-3 sm:px-4 py-3 font-mono focus:ring-2 focus:ring-white/20 focus:border-zinc-500">
+                    </div>
+                </div>
+
+                <!-- Trailing Settings -->
+                <div id="settings-trailing" class="hidden space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Trailing %</label>
+                            <div class="flex items-center gap-4 mt-2">
+                                <input type="range" min="1" max="20" id="trailing-percent" value="{{ strategy.trailing_percent }}" onchange="updateStrategy()" class="flex-1 accent-white">
+                                <span id="trailing-percent-display" class="font-mono bg-zinc-900 px-4 py-2 rounded-xl border border-zinc-700">{{ strategy.trailing_percent }}%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Trade Size</label>
+                            <input type="number" step="0.001" id="trailing-trade-amount" value="{{ strategy.trade_amount }}" onchange="updateStrategy()" class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 font-mono focus:ring-2 focus:ring-white/20">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="bg-zinc-900 p-3 rounded-xl">
+                            <p class="text-zinc-500 text-xs">High</p>
+                            <p id="trailing-high" class="font-mono text-sm">$0.00</p>
+                        </div>
+                        <div class="bg-zinc-900 p-3 rounded-xl">
+                            <p class="text-zinc-500 text-xs">Stop Price</p>
+                            <p id="trailing-stop" class="font-mono text-sm text-red-400">$0.00</p>
+                        </div>
+                        <div class="bg-zinc-900 p-3 rounded-xl">
+                            <p class="text-zinc-500 text-xs">Low</p>
+                            <p id="trailing-low" class="font-mono text-sm">---</p>
+                        </div>
+                        <div class="bg-zinc-900 p-3 rounded-xl">
+                            <p class="text-zinc-500 text-xs">Buy Price</p>
+                            <p id="trailing-buy" class="font-mono text-sm text-emerald-400">---</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DCA Settings -->
+                <div id="settings-dca" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Interval</label>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="setDcaInterval(30)" id="dca-30" class="flex-1 py-3 rounded-xl font-medium transition-all bg-zinc-900 hover:bg-zinc-800 border border-zinc-700">30s</button>
+                            <button onclick="setDcaInterval(60)" id="dca-60" class="flex-1 py-3 rounded-xl font-medium transition-all bg-white text-black">1m</button>
+                            <button onclick="setDcaInterval(300)" id="dca-300" class="flex-1 py-3 rounded-xl font-medium transition-all bg-zinc-900 hover:bg-zinc-800 border border-zinc-700">5m</button>
+                            <button onclick="setDcaInterval(3600)" id="dca-3600" class="flex-1 py-3 rounded-xl font-medium transition-all bg-zinc-900 hover:bg-zinc-800 border border-zinc-700">1h</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-zinc-400 text-xs font-medium uppercase tracking-wider">Amount per Purchase (USD)</label>
+                        <input type="number" id="dca-amount" value="{{ strategy.dca_amount }}" onchange="updateStrategy()" class="w-full mt-2 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 font-mono focus:ring-2 focus:ring-white/20">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="space-y-6">
+        <!-- Holdings Card -->
+        <div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-3xl p-4 sm:p-6">
+            <h3 class="text-lg font-semibold mb-4">Current Holdings</h3>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-zinc-400" id="holding-symbol">{{ asset_info.symbol }}</span>
+                    <span id="holding-amount" class="font-mono">{{ holding.amount }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-zinc-400">Value</span>
+                    <span id="holding-value" class="font-mono">$0.00</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-zinc-400">Avg Cost</span>
+                    <span id="holding-avg-cost" class="font-mono">${{ holding.average_cost|floatformat:2 }}</span>
+                </div>
+                <div class="h-px bg-zinc-800"></div>
+                <div class="flex items-center justify-between">
+                    <span class="text-zinc-400">Unrealized P/L</span>
+                    <span id="unrealized-pl" class="font-mono font-semibold text-zinc-400">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Quick Trade Buttons -->
+            <div class="grid grid-cols-2 gap-3 mt-6">
+                <button onclick="manualTrade('buy')" id="btn-buy" class="py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold hover:bg-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    Buy
+                </button>
+                <button onclick="manualTrade('sell')" id="btn-sell" class="py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-semibold hover:bg-red-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    Sell
+                </button>
+            </div>
+            
+            <!-- Reset Button -->
+            <button onclick="resetPortfolio()" class="w-full mt-4 py-2 rounded-xl bg-zinc-800 text-zinc-400 text-sm hover:bg-zinc-700 transition-all">
+                Reset Portfolio
+            </button>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-3xl p-4 sm:p-6">
+            <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
+            
+            <div id="recent-trades" class="space-y-3 max-h-80 overflow-y-auto">
+                {% if recent_trades %}
+                    {% for trade in recent_trades %}
+                    <div class="p-3 rounded-xl {% if trade.trade_type == 'BUY' %}bg-emerald-500/5 border border-emerald-500/10{% else %}bg-red-500/5 border border-red-500/10{% endif %}">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full {% if trade.trade_type == 'BUY' %}bg-emerald-400{% else %}bg-red-400{% endif %}"></span>
+                                <span class="font-medium text-sm">{{ trade.trade_type }}</span>
+                                <span class="text-zinc-500 text-xs">{{ trade.symbol }}</span>
+                            </div>
+                            <span class="font-mono text-sm">${{ trade.total|floatformat:2 }}</span>
+                        </div>
+                        <p class="text-xs text-zinc-500 mt-1">
+                            {{ trade.amount|floatformat:6 }} @ ${{ trade.price|floatformat:2 }}
+                        </p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-zinc-500 text-center py-8 text-sm">No trades yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // State
+    let currentAsset = '{{ selected_asset }}';
+    let currentPrice = null;
+    let priceHistory = [];
+    let isRunning = {{ strategy.is_active|yesno:"true,false" }};
+    let strategy = '{{ strategy.strategy_type }}';
+    let balance = {{ portfolio.balance }};
+    let holdingAmount = {{ holding.amount }};
+    let averageCost = {{ holding.average_cost }};
+    
+    // Trailing state
+    let highestPrice = {{ strategy.highest_price }};
+    let lowestPrice = {{ strategy.lowest_price|default:"null" }};
+    let trailingStopPrice = {{ strategy.trailing_stop_price }};
+    let trailingBuyPrice = {{ strategy.trailing_buy_price|default:"null" }};
+    let lastDcaTime = Date.now();
+    
+    // Settings
+    let buyThreshold = {{ strategy.buy_threshold }};
+    let sellThreshold = {{ strategy.sell_threshold }};
+    let tradeAmount = {{ strategy.trade_amount }};
+    let trailingPercent = {{ strategy.trailing_percent }};
+    let dcaInterval = {{ strategy.dca_interval }};
+    let dcaAmount = {{ strategy.dca_amount }};
+    
+    const assets = {
+        {% for asset in assets %}
+        '{{ asset.id }}': { name: '{{ asset.name }}', symbol: '{{ asset.symbol }}', color: '{{ asset.color }}' },
+        {% endfor %}
+    };
+
+    // Fetch price from API
+    async function fetchPrice() {
+        try {
+            updateApiStatus('connecting');
+            const response = await fetch(`/api/price/${currentAsset}/`);
+            const data = await response.json();
+            
+            if (data.price) {
+                currentPrice = data.price;
+                priceHistory.push({ price: data.price, time: Date.now() });
+                if (priceHistory.length > 120) priceHistory.shift();
+                
+                updatePriceDisplay(data.price, data.change_24h);
+                updateApiStatus('connected');
+                drawChart();
+                
+                // Initialize thresholds if needed
+                if (buyThreshold === 0 && sellThreshold === 0) {
+                    buyThreshold = Math.round(data.price * 0.97 * 100) / 100;
+                    sellThreshold = Math.round(data.price * 1.03 * 100) / 100;
+                    document.getElementById('buy-threshold').value = buyThreshold;
+                    document.getElementById('sell-threshold').value = sellThreshold;
+                }
+                
+                // Run automation
+                if (isRunning) {
+                    runAutomation(data.price);
+                }
+                
+                updateUI();
+            }
+        } catch (error) {
+            console.error('Price fetch error:', error);
+            updateApiStatus('error');
+        }
+    }
+
+    // Update price display
+    function updatePriceDisplay(price, change) {
+        document.getElementById('current-price').textContent = `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        const changeEl = document.getElementById('price-change');
+        const arrow = change >= 0 ? '↑' : '↓';
+        changeEl.textContent = `${arrow} ${Math.abs(change).toFixed(2)}% (24h)`;
+        changeEl.className = `text-sm font-medium ${change >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+    }
+
+    // Draw price chart
+    function drawChart() {
+        const container = document.getElementById('chart-container');
+        if (priceHistory.length < 2) return;
+        
+        const prices = priceHistory.map(p => p.price);
+        const max = Math.max(...prices);
+        const min = Math.min(...prices);
+        const range = max - min || 1;
+        const isUp = prices[prices.length - 1] >= prices[0];
+        
+        const points = priceHistory.map((p, i) => {
+            const x = (i / (priceHistory.length - 1)) * 100;
+            const y = 100 - ((p.price - min) / range) * 100;
+            return `${x},${y}`;
+        }).join(' ');
+        
+        const color = isUp ? '#22c55e' : '#ef4444';
+        
+        container.innerHTML = `
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="w-full h-full">
+                <defs>
+                    <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <polygon points="0,100 ${points} 100,100" fill="url(#chartGradient)"/>
+                <polyline points="${points}" fill="none" stroke="${color}" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+                ${strategy === 'threshold' && buyThreshold > 0 ? `
+                    <line x1="0" y1="${100 - ((buyThreshold - min) / range) * 100}" x2="100" y2="${100 - ((buyThreshold - min) / range) * 100}" stroke="#22c55e" stroke-width="0.3" stroke-dasharray="2,2"/>
+                    <line x1="0" y1="${100 - ((sellThreshold - min) / range) * 100}" x2="100" y2="${100 - ((sellThreshold - min) / range) * 100}" stroke="#ef4444" stroke-width="0.3" stroke-dasharray="2,2"/>
+                ` : ''}
+            </svg>
+            <div class="absolute top-2 right-2 text-xs text-zinc-500">$${max.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div class="absolute bottom-2 right-2 text-xs text-zinc-500">$${min.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+        `;
+        container.classList.add('relative');
+        
+        document.getElementById('chart-info').textContent = `Last ${priceHistory.length} data points`;
+        document.getElementById('last-update').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    }
+
+    // Run automation logic
+    async function runAutomation(price) {
+        // Threshold strategy
+        if (strategy === 'threshold') {
+            if (price <= buyThreshold && balance >= price * tradeAmount) {
+                await executeTrade('buy', tradeAmount, 'Price hit buy threshold');
+            }
+            if (price >= sellThreshold && holdingAmount >= tradeAmount) {
+                await executeTrade('sell', tradeAmount, 'Price hit sell threshold');
+            }
+        }
+        
+        // Trailing stop strategy
+        if (strategy === 'trailing') {
+            if (price > highestPrice) {
+                highestPrice = price;
+                trailingStopPrice = price * (1 - trailingPercent / 100);
+                updateTrailingDisplay();
+            }
+            if (lowestPrice === null || price < lowestPrice) {
+                lowestPrice = price;
+                trailingBuyPrice = price * (1 + trailingPercent / 100);
+                updateTrailingDisplay();
+            }
+            
+            if (holdingAmount > 0 && price <= trailingStopPrice && trailingStopPrice > 0) {
+                if (await executeTrade('sell', holdingAmount, `Trailing stop (${trailingPercent}% from high)`)) {
+                    highestPrice = 0;
+                    trailingStopPrice = 0;
+                    updateTrailingDisplay();
+                }
+            }
+            
+            if (holdingAmount === 0 && balance >= price * tradeAmount && trailingBuyPrice !== null && price >= trailingBuyPrice) {
+                if (await executeTrade('buy', tradeAmount, `Trailing buy (${trailingPercent}% from low)`)) {
+                    lowestPrice = null;
+                    trailingBuyPrice = null;
+                    updateTrailingDisplay();
+                }
+            }
+        }
+        
+        // DCA strategy
+        if (strategy === 'dca') {
+            const now = Date.now();
+            if (now - lastDcaTime >= dcaInterval * 1000 && balance >= dcaAmount) {
+                const amount = dcaAmount / price;
+                if (await executeTrade('buy', amount, 'DCA purchase')) {
+                    lastDcaTime = now;
+                }
+            }
+        }
+    }
+
+    // Execute trade
+    async function executeTrade(type, amount, reason) {
+        try {
+            const response = await fetch('/api/trade/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    type: type,
+                    asset_id: currentAsset,
+                    amount: amount,
+                    price: currentPrice,
+                    reason: reason
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                balance = data.balance;
+                holdingAmount = data.holding;
+                averageCost = data.average_cost;
+                updateUI();
+                addTradeToUI(data.trade);
+                showNotification(type, `${type.toUpperCase()}: ${amount.toFixed(6)} @ $${currentPrice.toLocaleString()}`);
+                return true;
+            } else {
+                console.error('Trade failed:', data.error);
+                return false;
+            }
+        } catch (error) {
+            console.error('Trade error:', error);
+            return false;
+        }
+    }
+
+    // Add trade to UI
+    function addTradeToUI(trade) {
+        const container = document.getElementById('recent-trades');
+        const isBuy = trade.type === 'BUY';
+        
+        const html = `
+            <div class="p-3 rounded-xl ${isBuy ? 'bg-emerald-500/5 border border-emerald-500/10' : 'bg-red-500/5 border border-red-500/10'}">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full ${isBuy ? 'bg-emerald-400' : 'bg-red-400'}"></span>
+                        <span class="font-medium text-sm">${trade.type}</span>
+                        <span class="text-zinc-500 text-xs">${assets[currentAsset].symbol}</span>
+                    </div>
+                    <span class="font-mono text-sm">$${trade.total.toFixed(2)}</span>
+                </div>
+                <p class="text-xs text-zinc-500 mt-1">
+                    ${trade.amount.toFixed(6)} @ $${trade.price.toFixed(2)}
+                </p>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('afterbegin', html);
+        
+        // Remove "no trades" message if present
+        const noTrades = container.querySelector('.text-center');
+        if (noTrades) noTrades.remove();
+        
+        // Limit to 10 trades
+        while (container.children.length > 10) {
+            container.lastChild.remove();
+        }
+    }
+
+    // Update UI elements
+    function updateUI() {
+        // Portfolio value
+        const portfolioValue = balance + (holdingAmount * (currentPrice || 0));
+        const totalPL = portfolioValue - 50000;
+        
+        document.getElementById('portfolio-value').textContent = `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        const plEl = document.getElementById('total-pl');
+        plEl.textContent = `${totalPL >= 0 ? '+' : ''}$${totalPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        plEl.className = `text-xl sm:text-2xl font-bold mt-1 ${totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+        
+        document.getElementById('total-pl-percent').textContent = `${((totalPL / 50000) * 100).toFixed(2)}%`;
+        
+        // Balance & Holdings
+        document.getElementById('cash-balance').textContent = `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('holding-amount').textContent = holdingAmount.toFixed(6);
+        document.getElementById('holding-value').textContent = `$${(holdingAmount * (currentPrice || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('holding-avg-cost').textContent = `$${averageCost.toFixed(2)}`;
+        
+        // Unrealized P/L
+        const unrealizedPL = holdingAmount > 0 ? ((currentPrice || 0) - averageCost) * holdingAmount : 0;
+        const unrealizedEl = document.getElementById('unrealized-pl');
+        unrealizedEl.textContent = `${unrealizedPL >= 0 ? '+' : ''}$${unrealizedPL.toFixed(2)}`;
+        unrealizedEl.className = `font-mono font-semibold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+        
+        // Footer
+        document.getElementById('footer-balance').textContent = `$${balance.toFixed(2)}`;
+        document.getElementById('footer-holdings').textContent = `${holdingAmount.toFixed(4)} ${assets[currentAsset].symbol}`;
+        
+        // Bot status
+        const botStatus = document.getElementById('bot-status');
+        botStatus.innerHTML = `
+            <span class="w-2 h-2 rounded-full ${isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}"></span>
+            ${isRunning ? 'Bot Active' : 'Bot Stopped'}
+        `;
+        botStatus.className = `flex items-center gap-2 ${isRunning ? 'text-emerald-400' : 'text-zinc-500'}`;
+        
+        document.getElementById('current-strategy').textContent = strategy.charAt(0).toUpperCase() + strategy.slice(1);
+        
+        // Update toggle button
+        const toggleBtn = document.getElementById('toggle-bot');
+        toggleBtn.disabled = !currentPrice;
+        if (currentPrice) {
+            toggleBtn.className = `w-full sm:w-auto px-6 py-3 rounded-2xl font-semibold transition-all transform hover:scale-105 active:scale-95 ${isRunning ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/25' : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/25'}`;
+            toggleBtn.textContent = isRunning ? '⏹ Stop' : '▶ Start';
+        }
+    }
+
+    // Update trailing display
+    function updateTrailingDisplay() {
+        document.getElementById('trailing-high').textContent = `$${highestPrice.toFixed(2)}`;
+        document.getElementById('trailing-stop').textContent = `$${trailingStopPrice.toFixed(2)}`;
+        document.getElementById('trailing-low').textContent = lowestPrice !== null ? `$${lowestPrice.toFixed(2)}` : '---';
+        document.getElementById('trailing-buy').textContent = trailingBuyPrice !== null ? `$${trailingBuyPrice.toFixed(2)}` : '---';
+    }
+
+    // Change asset
+    function changeAsset(assetId) {
+        window.location.href = `?asset=${assetId}`;
+    }
+
+    // Set strategy
+    function setStrategy(newStrategy) {
+        strategy = newStrategy;
+        
+        // Update buttons
+        ['threshold', 'trailing', 'dca'].forEach(s => {
+            const btn = document.getElementById(`btn-${s}`);
+            const settings = document.getElementById(`settings-${s}`);
+            
+            if (s === newStrategy) {
+                btn.className = 'p-3 sm:p-4 rounded-2xl text-left transition-all bg-white text-black ring-2 ring-white';
+                settings.classList.remove('hidden');
+            } else {
+                btn.className = 'p-3 sm:p-4 rounded-2xl text-left transition-all bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700';
+                settings.classList.add('hidden');
+            }
+        });
+        
+        updateStrategy();
+    }
+
+    // Set threshold percentage
+    function setThresholdPercent(type, percent) {
+        if (!currentPrice) return;
+        
+        if (type === 'buy') {
+            buyThreshold = Math.round(currentPrice * (1 + percent / 100) * 100) / 100;
+            document.getElementById('buy-threshold').value = buyThreshold;
+        } else {
+            sellThreshold = Math.round(currentPrice * (1 + percent / 100) * 100) / 100;
+            document.getElementById('sell-threshold').value = sellThreshold;
+        }
+        
+        updateStrategy();
+        drawChart();
+    }
+
+    // Set DCA interval
+    function setDcaInterval(interval) {
+        dcaInterval = interval;
+        
+        [30, 60, 300, 3600].forEach(i => {
+            const btn = document.getElementById(`dca-${i}`);
+            if (i === interval) {
+                btn.className = 'flex-1 py-3 rounded-xl font-medium transition-all bg-white text-black';
+            } else {
+                btn.className = 'flex-1 py-3 rounded-xl font-medium transition-all bg-zinc-900 hover:bg-zinc-800 border border-zinc-700';
+            }
+        });
+        
+        updateStrategy();
+    }
+
+    // Update strategy on server
+    async function updateStrategy() {
+        // Get values from inputs
+        buyThreshold = parseFloat(document.getElementById('buy-threshold').value) || 0;
+        sellThreshold = parseFloat(document.getElementById('sell-threshold').value) || 0;
+        tradeAmount = parseFloat(document.getElementById('trade-amount').value) || 0.01;
+        trailingPercent = parseFloat(document.getElementById('trailing-percent').value) || 5;
+        dcaAmount = parseFloat(document.getElementById('dca-amount').value) || 100;
+        
+        document.getElementById('trailing-percent-display').textContent = `${trailingPercent}%`;
+        
+        try {
+            await fetch('/api/strategy/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    asset_id: currentAsset,
+                    strategy_type: strategy,
+                    buy_threshold: buyThreshold,
+                    sell_threshold: sellThreshold,
+                    trade_amount: tradeAmount,
+                    trailing_percent: trailingPercent,
+                    dca_interval: dcaInterval,
+                    dca_amount: dcaAmount
+                })
+            });
+        } catch (error) {
+            console.error('Strategy update error:', error);
+        }
+    }
+
+    // Toggle bot
+    async function toggleBot() {
+        isRunning = !isRunning;
+        
+        // Reset trailing state when starting
+        if (isRunning && strategy === 'trailing') {
+            highestPrice = currentPrice || 0;
+            lowestPrice = currentPrice;
+            trailingStopPrice = currentPrice * (1 - trailingPercent / 100);
+            trailingBuyPrice = currentPrice * (1 + trailingPercent / 100);
+            updateTrailingDisplay();
+        }
+        
+        if (isRunning && strategy === 'dca') {
+            lastDcaTime = Date.now();
+        }
+        
+        try {
+            await fetch('/api/strategy/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    asset_id: currentAsset,
+                    is_active: isRunning,
+                    highest_price: highestPrice,
+                    lowest_price: lowestPrice,
+                    trailing_stop_price: trailingStopPrice,
+                    trailing_buy_price: trailingBuyPrice
+                })
+            });
+        } catch (error) {
+            console.error('Toggle error:', error);
+        }
+        
+        updateUI();
+    }
+
+    // Manual trade
+    function manualTrade(type) {
+        if (!currentPrice) return;
+        executeTrade(type, tradeAmount, 'Manual trade');
+    }
+
+    // Reset portfolio
+    async function resetPortfolio() {
+        if (!confirm('Are you sure you want to reset your portfolio to $50,000?')) return;
+        
+        try {
+            await fetch('/api/portfolio/reset/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                }
+            });
+            
+            window.location.reload();
+        } catch (error) {
+            console.error('Reset error:', error);
+        }
+    }
+
+    // Initialize
+    fetchPrice();
+    setInterval(fetchPrice, 8000);
+    
+    // Set initial strategy UI
+    setStrategy(strategy);
+    setDcaInterval(dcaInterval);
+    updateTrailingDisplay();
+</script>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends 'trading/base.html' %}
+{% block title %}Alerts - TradeFlow{% endblock %}
+
+{% block content %}
+<div class="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-3xl p-4 sm:p-6">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <h2 class="text-2xl font-bold">Notifications</h2>
+        <div class="flex items-center gap-3">
+            <button onclick="requestNotificationPermission()" id="enable-notif-btn" class="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-zinc-800 hover:bg-zinc-700">
+                🔕 Enable Browser Notifications
+            </button>
+            {% if notifications %}
+            <button onclick="clearNotifications()" class="px-4 py-2 rounded-xl text-sm bg-zinc-800 hover:bg-zinc-700 transition-colors">
+                Clear All
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="notifications-container" class="space-y-3 max-h-[600px] overflow-y-auto">
+        {% if notifications %}
+            {% for notif in notifications %}
+            <div class="p-4 rounded-2xl border-l-4 {% if notif.notification_type == 'buy' %}bg-emerald-500/5 border-emerald-500{% elif notif.notification_type == 'sell' %}bg-red-500/5 border-red-500{% elif notif.notification_type == 'alert' %}bg-amber-500/5 border-amber-500{% else %}bg-zinc-800/50 border-zinc-600{% endif %}">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-xs font-medium uppercase tracking-wider {% if notif.notification_type == 'buy' %}text-emerald-400{% elif notif.notification_type == 'sell' %}text-red-400{% elif notif.notification_type == 'alert' %}text-amber-400{% else %}text-zinc-500{% endif %}">
+                            {{ notif.notification_type }}
+                        </span>
+                        <p class="mt-1">{{ notif.message }}</p>
+                    </div>
+                    <span class="text-zinc-500 text-xs whitespace-nowrap ml-4">{{ notif.created_at|date:"M d, H:i" }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-16 text-zinc-500">
+                <p class="text-4xl mb-4">🔔</p>
+                <p>No notifications yet</p>
+                <p class="text-sm mt-2">Start trading to receive notifications about your trades and alerts.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Update notification button state
+    function updateNotifBtnState() {
+        const btn = document.getElementById('enable-notif-btn');
+        if (Notification.permission === 'granted') {
+            btn.innerHTML = '🔔 Notifications Enabled';
+            btn.classList.remove('bg-zinc-800', 'hover:bg-zinc-700');
+            btn.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20');
+        }
+    }
+    
+    // Clear all notifications
+    async function clearNotifications() {
+        if (!confirm('Clear all notifications?')) return;
+        
+        try {
+            await fetch('/api/notifications/clear/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                }
+            });
+            
+            document.getElementById('notifications-container').innerHTML = `
+                <div class="text-center py-16 text-zinc-500">
+                    <p class="text-4xl mb-4">🔔</p>
+                    <p>No notifications yet</p>
+                    <p class="text-sm mt-2">Start trading to receive notifications about your trades and alerts.</p>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Clear error:', error);
+        }
+    }
+    
+    // Update footer with current data
+    async function loadPortfolioData() {
+        try {
+            const response = await fetch('/api/portfolio/');
+            const data = await response.json();
+            document.getElementById('footer-balance').textContent = `$${data.balance.toFixed(2)}`;
+            if (data.holding) {
+                document.getElementById('footer-holdings').textContent = `${data.holding.amount.toFixed(4)}`;
+            }
+        } catch (error) {
+            console.error('Error loading portfolio:', error);
+        }
+    }
+    
+    updateNotifBtnState();
+    loadPortfolioData();
+</script>
+{% endblock %}

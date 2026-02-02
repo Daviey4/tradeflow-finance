@@ -1,0 +1,30 @@
+# TradeFlow Production Requirements
+
+# Django & Core
+Django>=4.2,<5.0
+gunicorn>=21.0.0
+whitenoise>=6.6.0
+
+# Database
+psycopg2-binary>=2.9.9
+dj-database-url>=2.1.0
+
+# Cache & Queue
+redis>=5.0.0
+celery>=5.3.0
+
+# API & REST
+djangorestframework>=3.14.0
+django-cors-headers>=4.3.0
+
+# HTTP Client
+requests>=2.31.0
+
+# Security
+python-dotenv>=1.0.0
+
+# Production server
+uvicorn>=0.24.0
+
+# Monitoring (optional)
+sentry-sdk>=1.38.0
