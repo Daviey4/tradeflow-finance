@@ -33,14 +33,49 @@ TradeFlow Finance is a full-stack web application that combines paper trading si
 - **Trade History** - Complete transaction logs
 - **Session-Based Demo** - Try without account creation
 
-### 🔒 Security Features
+## 🔐 Security Learning & Testing
+
+**Current Focus:** Hands-on penetration testing and vulnerability assessment
+
+I'm actively learning web application security by testing this platform:
+
+### Security Testing Journey
+- **Week 1 (Current):** SQL injection testing - writing Python scanners, testing payloads
+- **Week 2:** XSS and CSRF testing - validating Django protections  
+- **Week 3:** Burp Suite - learning professional pentesting tools
+- **Week 4:** Full penetration test report - comprehensive security assessment
+
+**Documentation:** All security testing scripts and findings in [`/security_tests/`](security_tests/)
+
+### What I'm Building
+- ✅ Automated SQL injection testing scripts (Python)
+- 🔄 XSS vulnerability scanners
+- 🔄 CSRF validation tools
+- 🔄 Professional penetration test reports
+
+**Purpose:** This project demonstrates my transition from backend development to security engineering through practical, hands-on vulnerability assessment.
+
+---
+
+### 🔒 Security Implementation
+
+**Production Security:**
 - CSRF protection on all forms
 - XSS prevention via template auto-escaping
 - SQL injection prevention through Django ORM
-- Secure session management
+- Secure session management (Django defaults)
 - Input validation and sanitization
 - Static security analysis (Bandit)
 - Dependency vulnerability scanning (Safety)
+
+**Security Testing (Learning):**
+- 🧪 Manual penetration testing (SQL injection, XSS, CSRF)
+- 🧪 Writing Python security automation scripts
+- 🧪 Professional security documentation
+- 🧪 Learning: Burp Suite, OWASP ZAP, security report writing
+
+**Test Results:** 0 vulnerabilities found in automated scans (Bandit + Safety)  
+**Testing Log:** See [`security_tests/TESTING_LOG.md`](security_tests/TESTING_LOG.md)
 
 ---
 
@@ -166,13 +201,18 @@ tradeflow-production/
 │   ├── models.py           # Portfolio, Trade models
 │   ├── alpaca_trading.py   # Trading logic
 │   └── templates/          # Trading UI
+├── security_tests/         # Security testing & learning ⭐ NEW
+│   ├── sql_injection/      # SQL injection testing scripts
+│   ├── TESTING_LOG.md      # Daily security testing log
+│   └── README.md           # Testing methodology
 ├── tradeflow/              # Project settings
 │   ├── settings.py         # Configuration
 │   ├── settings_production.py
 │   └── urls.py             # URL routing
 ├── requirements.txt        # Dependencies
 ├── Dockerfile             # Container config
-└── docker-compose.yml     # Multi-container setup
+├── docker-compose.yml     # Multi-container setup
+└── DEMO.md                # Current project state ⭐ NEW
 ```
 
 ---
@@ -221,6 +261,28 @@ coverage report
 
 ---
 
+## 🎓 Learning Objectives
+
+This project serves dual purposes:
+
+### 1. Secure Application Development
+- Build production-ready applications following OWASP Top 10 guidelines
+- Implement security controls from day one
+- Automated security scanning in CI/CD pipeline
+
+### 2. Security Engineering Transition
+- **From:** Backend Python Engineer (4+ years)
+- **To:** Security Engineer specializing in application security
+- **Method:** Hands-on penetration testing of own applications
+- **Tools:** Python security scripts, Burp Suite, OWASP ZAP
+- **Documentation:** Professional pentest reports, security findings
+
+**Why this approach?** Learning security by building secure apps AND testing them provides both offensive and defensive perspectives - essential for modern security engineering.
+
+---
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -229,10 +291,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👤 Author
 
-**David Alicea**
-- Email: aliceadavidj@gmail.com
-- LinkedIn: [linkedin.com/in/davidalicea](#)
-- GitHub: [@davidalicea](#)
+**David Alicea**  
+*Backend Engineer → Security Engineer*
+
+Transitioning from 4+ years of backend Python development to security engineering through hands-on penetration testing and secure application development.
+
+- **Email:** aliceadavidj@gmail.com
+- **LinkedIn:** [linkedin.com/in/david-alicea-080793198](https://www.linkedin.com/in/david-alicea-080793198/)
+- **GitHub:** [@Daviey4](https://github.com/Daviey4)
+
+**Current Learning:**
+- Web application penetration testing
+- Writing security automation tools in Python
+- OWASP Top 10 practical implementation
+- Security documentation and reporting
 
 ---
 
